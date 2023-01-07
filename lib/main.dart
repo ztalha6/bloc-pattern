@@ -1,6 +1,14 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:bloc/bloc.dart';
-import 'dart:math' as math show Random;
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'dart:developer' as devTools show log;
+
+extension Log on Object {
+  void log() => devTools.log(toString());
+}
 
 void main() {
   runApp(const MyApp());
@@ -16,78 +24,154 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      home: const MyHomePage(),
+      home: BlocProvider(
+        create: (_) => PersonBloc(),
+        child: const HomePage(),
+      ),
     );
   }
 }
 
-const names = [
-  'Foo',
-  'Bar',
-  'Baz',
-];
-
-extension RandonElement<T> on Iterable<T> {
-  T getRandomElement() => elementAt(math.Random().nextInt(length));
+@immutable
+abstract class LoadAction {
+  const LoadAction();
 }
 
-class NamesCubit extends Cubit<String?> {
-  NamesCubit() : super(null);
-
-  void pickRandomName() => emit(names.getRandomElement());
+@immutable
+class LoadPersonAction implements LoadAction {
+  final PersonUrl url;
+  const LoadPersonAction(this.url) : super();
 }
 
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key});
+enum PersonUrl {
+  person1("http://127.0.0.1:5500/api/persons1.json"),
+  person2("http://127.0.0.1:5500/api/persons2.json");
 
-  @override
-  State<MyHomePage> createState() => _MyHomePageState();
+  final String urlString;
+  const PersonUrl(this.urlString);
 }
 
-class _MyHomePageState extends State<MyHomePage> {
-  late final NamesCubit cubit;
+class Person {
+  String? name;
+  int? age;
 
-  @override
-  void initState() {
-    cubit = NamesCubit();
-    super.initState();
+  Person({required this.name, required this.age});
+
+  Person.fromJson(Map<String, dynamic> json) {
+    name = json['name'];
+    age = json['age'];
+  }
+
+  Map<String, dynamic> toJson() {
+    final Map<String, dynamic> data = <String, dynamic>{};
+    data['name'] = name;
+    data['age'] = age;
+    return data;
   }
 
   @override
-  void dispose() {
-    cubit.close();
-    super.dispose();
+  String toString() => 'Person (name=$name, age=$age)';
+}
+
+Future<Iterable<Person>> getPerons(String url) => HttpClient()
+    .getUrl(Uri.parse(url))
+    .then((req) => req.close())
+    .then((resp) => resp.transform(utf8.decoder).join())
+    .then((str) => json.decode(str) as List<dynamic>)
+    .then((list) => list.map((e) => Person.fromJson(e)));
+
+class GetPersonResponse {
+  Iterable<Person> persons;
+  bool isRetrievedFromCache;
+
+  GetPersonResponse(
+      {required this.persons, required this.isRetrievedFromCache});
+
+  @override
+  String toString() =>
+      "GetPersonResponse (isRetrievedFromCache = $isRetrievedFromCache, person = $persons)";
+}
+
+class PersonBloc extends Bloc<LoadAction, GetPersonResponse?> {
+  final Map<PersonUrl, Iterable<Person>> _cache = {};
+  PersonBloc() : super(null) {
+    on<LoadPersonAction>((event, emit) async {
+      final url = event.url;
+      if (_cache.containsKey(url)) {
+        // we have value in cache
+        final cachePersons = _cache[url]!;
+        final result = GetPersonResponse(
+          persons: cachePersons,
+          isRetrievedFromCache: true,
+        );
+        emit(result);
+      } else {
+        final persons = await getPerons(url.urlString);
+        _cache[url] = persons;
+        final result = GetPersonResponse(
+          persons: persons,
+          isRetrievedFromCache: false,
+        );
+        emit(result);
+      }
+    });
   }
+}
+
+extension Subscript<T> on Iterable<T> {
+  T? operator [](int index) => length > index ? elementAt(index) : null;
+}
+
+class HomePage extends StatelessWidget {
+  const HomePage({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Cubit Demo"),
+        title: const Text('Bloc Example'),
       ),
-      body: StreamBuilder<String?>(
-        stream: cubit.stream,
-        // initialData: initialData,
-        builder: (BuildContext context, AsyncSnapshot snapshot) {
-          final button = TextButton(
-              onPressed: () => cubit.pickRandomName(),
-              child: const Text("Pick random name"));
-          switch (snapshot.connectionState) {
-            case ConnectionState.none:
-              return button;
-            case ConnectionState.waiting:
-              return button;
-            case ConnectionState.active:
-              return Column(
-                children: [
-                  Text(snapshot.data ?? ""),
-                  button,
-                ],
+      body: Column(
+        children: [
+          Row(
+            children: [
+              TextButton(
+                onPressed: () {
+                  context.read<PersonBloc>().add(
+                        const LoadPersonAction(PersonUrl.person1),
+                      );
+                },
+                child: const Text('Load json 1'),
+              ),
+              TextButton(
+                onPressed: () {
+                  context.read<PersonBloc>().add(
+                        const LoadPersonAction(PersonUrl.person2),
+                      );
+                },
+                child: const Text('Load json 2'),
+              ),
+            ],
+          ),
+          BlocBuilder<PersonBloc, GetPersonResponse?>(
+            buildWhen: (previousResult, currentResult) =>
+                previousResult?.persons != currentResult?.persons,
+            builder: (context, fetchResult) {
+              fetchResult?.log();
+              final persons = fetchResult?.persons;
+              if (persons == null) return const SizedBox.shrink();
+              return Expanded(
+                child: ListView.builder(
+                  itemCount: persons.length,
+                  itemBuilder: (BuildContext context, int index) {
+                    final person = persons[index]!;
+                    return Text('${person.name}, ${persons[index]?.age}');
+                  },
+                ),
               );
-            case ConnectionState.done:
-              return const SizedBox.shrink();
-          }
-        },
+            },
+          )
+        ],
       ),
     );
   }
