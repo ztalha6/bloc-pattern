@@ -29,10 +29,10 @@ enum LoginError {
   const LoginError(this.value);
 }
 
-class Notes {
+class Note {
   final String title;
 
-  Notes({required this.title});
+  const Note({required this.title});
 
   @override
   String toString() => 'Notes(title: $title)';
@@ -40,7 +40,7 @@ class Notes {
 
 final mockNotes = Iterable.generate(
   3,
-  ((index) => Notes(
+  ((index) => Note(
         title: 'title ${index + 1}',
       )),
 );

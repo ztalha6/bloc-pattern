@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 abstract class NotesApiProtocol {
   const NotesApiProtocol();
 
-  Future<Iterable<Notes>?> getNotes({
+  Future<Iterable<Note>?> getNotes({
     required LoginHandle loginHandle,
   });
 }
@@ -15,7 +15,7 @@ class NotesApi implements NotesApiProtocol {
   const NotesApi();
 
   @override
-  Future<Iterable<Notes>?> getNotes({required LoginHandle loginHandle}) async {
+  Future<Iterable<Note>?> getNotes({required LoginHandle loginHandle}) async {
     bool vaildHandle = await Future.delayed(
       const Duration(seconds: 2),
       () => loginHandle == const LoginHandle.fooBar(),
