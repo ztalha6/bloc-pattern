@@ -1,73 +1,46 @@
-import 'package:bloc_pattren_sample/api/login_api.dart';
-import 'package:bloc_pattren_sample/api/notes_api.dart';
-import 'package:bloc_pattren_sample/bloc/actions.dart';
-import 'package:bloc_pattren_sample/bloc/app_state.dart';
-import 'package:bloc_pattren_sample/models.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:meta/meta.dart';
+import 'dart:math' as math;
 
-class AppBloc extends Bloc<AppAction, AppState> {
-  final LoginApiProtocol loginApi;
-  final NotesApiProtocol notesApi;
-  final LoginHandle acceptableLoginHandle;
+part 'app_event.dart';
+part 'app_state.dart';
+
+typedef AppBlocRAndomUrlPicker = String Function(Iterable<String> allUrlls);
+
+extension RandomElement<T> on Iterable<T> {
+  T getRandomElement() => elementAt(math.Random().nextInt(length));
+}
+
+class AppBloc extends Bloc<AppEvent, AppState> {
+  String _pickRandomUrl(Iterable<String> allUrls) => allUrls.getRandomElement();
 
   AppBloc({
-    required this.loginApi,
-    required this.notesApi,
-    required this.acceptableLoginHandle,
-  }) : super(const AppState.empty()) {
-    on<LoginAction>(
+    required Iterable<String> urls,
+    Duration? waitBeforeLoading,
+    AppBlocRAndomUrlPicker? urlPicker,
+  }) : super(const AppInitial()) {
+    on<LoadNextImageEvent>(
       (event, emit) async {
-        //* start the loading
         emit(
           const AppState(isLoading: true),
         );
-
-        //* login the user
-        final loginHandle = await loginApi.login(
-          email: event.email,
-          password: event.password,
-        );
-        emit(
-          AppState(
-            isLoading: false,
-            loginError:
-                loginHandle == null ? LoginError.invalidCredentials : null,
-            loginHandle: loginHandle,
-          ),
-        );
-      },
-    );
-
-    on<LoadNotesAction>(
-      (event, emit) async {
-        //* start the loading
-        emit(
-          AppState(
-            isLoading: true,
-            loginHandle: state.loginHandle,
-          ),
-        );
-
-        //* get the login handle
-        final loginHandle = state.loginHandle;
-        if (loginHandle != acceptableLoginHandle) {
+        final url = (urlPicker ?? _pickRandomUrl)(urls);
+        try {
+          if (waitBeforeLoading != null) {
+            await Future.delayed(waitBeforeLoading);
+          }
+          final NetworkAssetBundle bundle = NetworkAssetBundle(Uri.parse(url));
+          final Uint8List imageData =
+              (await bundle.load(url)).buffer.asUint8List();
           emit(
-            AppState(
-              isLoading: false,
-              loginError: LoginError.invalidCredentials,
-              loginHandle: loginHandle,
-            ),
+            AppState(data: imageData),
           );
-          return;
+        } catch (e) {
+          emit(
+            AppState(error: e),
+          );
         }
-        //* we have valid login handle to fetch notes
-        final notes = await notesApi.getNotes(loginHandle: loginHandle!);
-        emit(
-          AppState(
-            isLoading: false,
-            fetchedNotes: notes,
-          ),
-        );
       },
     );
   }
