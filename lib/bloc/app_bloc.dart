@@ -6,7 +6,8 @@ import 'dart:math' as math;
 part 'app_event.dart';
 part 'app_state.dart';
 
-typedef AppBlocRAndomUrlPicker = String Function(Iterable<String> allUrlls);
+typedef AppBlocRandomUrlPicker = String Function(Iterable<String> allUrls);
+typedef AppBlocUrlLoader = Future<Uint8List> Function(String url);
 
 extension RandomElement<T> on Iterable<T> {
   T getRandomElement() => elementAt(math.Random().nextInt(length));
@@ -14,11 +15,16 @@ extension RandomElement<T> on Iterable<T> {
 
 class AppBloc extends Bloc<AppEvent, AppState> {
   String _pickRandomUrl(Iterable<String> allUrls) => allUrls.getRandomElement();
+  Future<Uint8List> _loadUrl(String url) async {
+    final NetworkAssetBundle bundle = NetworkAssetBundle(Uri.parse(url));
+    return (await bundle.load(url)).buffer.asUint8List();
+  }
 
   AppBloc({
     required Iterable<String> urls,
     Duration? waitBeforeLoading,
-    AppBlocRAndomUrlPicker? urlPicker,
+    AppBlocRandomUrlPicker? urlPicker,
+    AppBlocUrlLoader? urlLoader,
   }) : super(const AppInitial()) {
     on<LoadNextImageEvent>(
       (event, emit) async {
@@ -30,9 +36,8 @@ class AppBloc extends Bloc<AppEvent, AppState> {
           if (waitBeforeLoading != null) {
             await Future.delayed(waitBeforeLoading);
           }
-          final NetworkAssetBundle bundle = NetworkAssetBundle(Uri.parse(url));
-          final Uint8List imageData =
-              (await bundle.load(url)).buffer.asUint8List();
+
+          final Uint8List imageData = await (urlLoader ?? _loadUrl)(url);
           emit(
             AppState(data: imageData),
           );
