@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "132723925405",
+    "project_id": "bloc-photolib-demo",
+    "storage_bucket": "bloc-photolib-demo.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:132723925405:android:146cbf1c8e84d05f390f74",
+        "android_client_info": {
+          "package_name": "com.example.bloc_pattren_sample"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "132723925405-orhd1u24o1772m4j3roh9c4vaob71eha.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB3rSEibFMhgIn9fxX1gwA6nac1v6rDihw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "132723925405-orhd1u24o1772m4j3roh9c4vaob71eha.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

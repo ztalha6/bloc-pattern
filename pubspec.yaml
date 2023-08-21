@@ -31,10 +31,15 @@ environment:
 dependencies:
   bloc: ^8.1.1
   cupertino_icons: ^1.0.2
+  firebase_auth: ^4.7.2
+  firebase_core: ^2.15.0
+  firebase_storage: ^11.2.5
   flutter:
     sdk: flutter
   flutter_bloc: ^8.1.2
   flutter_hooks: ^0.18.5+1
+  image_picker: ^1.0.2
+  uuid: ^3.0.7
 
 dev_dependencies:
   bloc_test: ^9.1.0
