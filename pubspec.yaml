@@ -39,7 +39,7 @@ dependencies:
   flutter_bloc: ^8.1.2
   flutter_hooks: ^0.18.5+1
   image_picker: ^1.0.2
-  uuid: ^3.0.7
+  uuid: ^4.0.0
 
 dev_dependencies:
   bloc_test: ^9.1.0
